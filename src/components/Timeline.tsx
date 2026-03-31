@@ -630,16 +630,17 @@ export default function Timeline() {
                         {/* Expanded Details */}
                         <div className={`space-y-4 ${transactions.length > 1 && !isExpanded ? 'hidden' : 'block'}`}>
                           {transactions.map((t, idx) => (
-                            <TimelineTransactionRow
-                              key={t.id}
-                              t={t}
-                              isFuture={isFuture}
-                              showTopBorder={idx !== 0}
-                              expandedNoteId={expandedNoteId}
-                              setExpandedNoteId={setExpandedNoteId}
-                              setEditingTransaction={setEditingTransaction}
-                              deleteTransaction={deleteTransaction}
-                            />
+                            <React.Fragment key={t.id}>
+                              <TimelineTransactionRow
+                                t={t}
+                                isFuture={isFuture}
+                                showTopBorder={idx !== 0}
+                                expandedNoteId={expandedNoteId}
+                                setExpandedNoteId={setExpandedNoteId}
+                                setEditingTransaction={setEditingTransaction}
+                                deleteTransaction={deleteTransaction}
+                              />
+                            </React.Fragment>
                           ))}
                           
                           {transactions.length > 1 && (

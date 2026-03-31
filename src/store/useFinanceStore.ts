@@ -46,6 +46,8 @@ interface FinanceState {
   deleteBusinessContract: (id: string) => void;
   resetAllData: () => void;
   resetExceptPayLater: () => void;
+  /** Khôi phục từ file JSON (backup đầy đủ hoặc mảng giao dịch cũ). */
+  restoreFromBackup: (payload: unknown) => void;
   seedShopeeBills: () => void;
   /** Đồng bộ MoMo: từng gói chuyển đổi hoá đơn (theo ảnh app) — mỗi gói tách kỳ; tổng dư = 9.829.952đ; bổ sung gói T5–T7 vào mảng nếu có */
   seedMomoRealityMarch2026: () => void;
@@ -143,6 +145,69 @@ export const useFinanceStore = create<FinanceState>()(
         businessContracts: [],
         hasCompletedOnboarding: false
       })),
+
+      restoreFromBackup: (payload: unknown) => {
+        const isTx = (x: unknown): x is Transaction => {
+          if (!x || typeof x !== 'object') return false;
+          const o = x as Record<string, unknown>;
+          return (
+            typeof o.id === 'string' &&
+            typeof o.amount === 'number' &&
+            typeof o.date === 'string' &&
+            typeof o.type === 'string' &&
+            typeof o.category === 'string'
+          );
+        };
+
+        if (Array.isArray(payload)) {
+          const txs = payload.filter(isTx);
+          set({ transactions: txs });
+          return;
+        }
+
+        if (!payload || typeof payload !== 'object') return;
+        const o = payload as Record<string, unknown>;
+
+        const txsRaw = o.transactions;
+        const transactions = Array.isArray(txsRaw)
+          ? txsRaw.filter(isTx)
+          : [];
+
+        const limitsRaw = o.spendingLimits;
+        const spendingLimits = Array.isArray(limitsRaw)
+          ? (limitsRaw as SpendingLimit[]).filter(
+              (l) =>
+                l &&
+                typeof l.id === 'string' &&
+                typeof l.amount === 'number' &&
+                typeof l.type === 'string' &&
+                typeof l.enabled === 'boolean'
+            )
+          : [];
+
+        const contractsRaw = o.businessContracts;
+        const businessContracts = Array.isArray(contractsRaw)
+          ? contractsRaw.map((c) =>
+              migrateBusinessContract(c as Record<string, unknown>)
+            )
+          : [];
+
+        set({
+          transactions,
+          initialBalance:
+            typeof o.initialBalance === 'number' && !Number.isNaN(o.initialBalance)
+              ? o.initialBalance
+              : 0,
+          spendingLimits,
+          businessContracts,
+          darkMode:
+            typeof o.darkMode === 'boolean' ? o.darkMode : get().darkMode,
+          hasCompletedOnboarding:
+            typeof o.hasCompletedOnboarding === 'boolean'
+              ? o.hasCompletedOnboarding
+              : true,
+        });
+      },
 
       seedShopeeBills: () => set((state) => {
         const shopeeBills = [
@@ -360,9 +425,10 @@ export const useFinanceStore = create<FinanceState>()(
           const existingIds = new Set(txs.map((t) => t.id));
           const newItems = fixed.filter((t) => !existingIds.has(t.id));
           if (newItems.length === 0 && !evanUpdated && !marineUpdated) return state;
-          return {
-            transactions: newItems.length > 0 ? [...txs, ...newItems] : txs,
-          };
+          const next = (
+            newItems.length > 0 ? [...txs, ...newItems] : txs
+          ) as Transaction[];
+          return { transactions: next };
         }),
 
       /** Sao kê TK/thẻ: Facebook Ads (FACEBK / fb.me/ads) 01–30/03/2026 — id saoke-fb-{FT...} */
@@ -657,7 +723,7 @@ export const useFinanceStore = create<FinanceState>()(
         const p = persisted as Partial<FinanceState> & Record<string, unknown>;
         const rawList = p.businessContracts ?? current.businessContracts;
         const migrated = (rawList ?? []).map((x) =>
-          migrateBusinessContract(x as Record<string, unknown>)
+          migrateBusinessContract(x as unknown as Record<string, unknown>)
         );
         return {
           ...current,

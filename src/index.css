@@ -1,6 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+/**
+ * Tailwind v4 mặc định dùng prefers-color-scheme cho dark:.
+ * Ghi đè để dark: theo class .dark trên <html> (đồng bộ với toggle trong app).
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   
@@ -16,11 +22,19 @@
 }
 
 @layer base {
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
   body {
     @apply bg-bg-light text-slate-800 antialiased transition-colors duration-300;
   }
-  
-  .dark body {
+
+  html.dark body {
     @apply bg-bg-dark text-slate-100;
   }
 }

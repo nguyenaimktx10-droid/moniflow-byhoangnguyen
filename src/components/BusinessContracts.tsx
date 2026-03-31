@@ -429,14 +429,15 @@ export default function BusinessContracts() {
         ) : (
           <div className="space-y-4">
             {sorted.map((c) => (
-              <ContractCard
-                key={c.id}
-                contract={c}
-                onEdit={() => openEdit(c)}
-                onDelete={() => {
-                  if (confirm(`Xóa hợp đồng "${c.projectName}"?`)) deleteBusinessContract(c.id);
-                }}
-              />
+              <React.Fragment key={c.id}>
+                <ContractCard
+                  contract={c}
+                  onEdit={() => openEdit(c)}
+                  onDelete={() => {
+                    if (confirm(`Xóa hợp đồng "${c.projectName}"?`)) deleteBusinessContract(c.id);
+                  }}
+                />
+              </React.Fragment>
             ))}
           </div>
         )}

@@ -1,15 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useFinanceStore } from '../store/useFinanceStore';
-import { Trash2, Download, Info, Moon, Sun, ChevronRight, Shield, Bell } from 'lucide-react';
+import {
+  Trash2,
+  Download,
+  Upload,
+  Info,
+  Moon,
+  Sun,
+  ChevronRight,
+  Shield,
+  Bell,
+  RefreshCw,
+  FileSpreadsheet,
+  ExternalLink,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import SpendingReminders from './SpendingReminders';
+import { GOOGLE_SHEET_URL } from '../constants/googleSheets';
+
+const BACKUP_VERSION = 1 as const;
 
 export default function Settings() {
-  const { initialBalance, setInitialBalance, transactions, darkMode, toggleDarkMode, resetAllData, resetExceptPayLater } = useFinanceStore();
+  const {
+    initialBalance,
+    setInitialBalance,
+    transactions,
+    spendingLimits,
+    businessContracts,
+    darkMode,
+    hasCompletedOnboarding,
+    toggleDarkMode,
+    resetAllData,
+    resetExceptPayLater,
+    restoreFromBackup,
+  } = useFinanceStore();
+
   const [showReminders, setShowReminders] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
-    const data = JSON.stringify(transactions, null, 2);
+    const payload = {
+      version: BACKUP_VERSION,
+      exportedAt: new Date().toISOString(),
+      initialBalance,
+      transactions,
+      spendingLimits,
+      businessContracts,
+      darkMode,
+      hasCompletedOnboarding,
+    };
+    const data = JSON.stringify(payload, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -18,17 +58,53 @@ export default function Settings() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePickImportFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = reader.result as string;
+        const json = JSON.parse(text) as unknown;
+        restoreFromBackup(json);
+        alert('Đã khôi phục dữ liệu từ file backup. Trang sẽ tải lại.');
+        window.location.reload();
+      } catch {
+        alert('Không đọc được file. Kiểm tra đúng định dạng JSON backup.');
+      }
+    };
+    reader.onerror = () => {
+      alert('Không đọc được file.');
+    };
+    reader.readAsText(file, 'UTF-8');
   };
 
   const handleClearData = () => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ dữ liệu và khởi động lại ứng dụng? Hành động này không thể hoàn tác.')) {
+    if (
+      window.confirm(
+        'Bạn có chắc chắn muốn xóa toàn bộ dữ liệu trong bộ nhớ và khởi động lại ứng dụng? Hành động này không thể hoàn tác.'
+      )
+    ) {
       resetAllData();
       window.location.reload();
     }
   };
 
   const handlePartialReset = () => {
-    if (window.confirm('Xóa hết dữ liệu cũ, chỉ giữ lại các khoản MoMo Trả Sau và Shopee PayLater?')) {
+    if (
+      window.confirm(
+        'Xóa hết dữ liệu cũ, chỉ giữ lại các khoản MoMo Trả Sau và Shopee PayLater?'
+      )
+    ) {
       resetExceptPayLater();
       window.location.reload();
     }
@@ -36,9 +112,18 @@ export default function Settings() {
 
   return (
     <div className="space-y-8">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        aria-hidden
+        onChange={handleImportFile}
+      />
+
       <AnimatePresence>
         {showReminders && (
-          <motion.div 
+          <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -80,19 +165,23 @@ export default function Settings() {
       {/* App Settings */}
       <section className="space-y-4">
         <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Ứng dụng</h2>
-        
+
         <div className="space-y-3">
-          <SettingItem 
+          <SettingItem
             icon={darkMode ? <Sun size={20} /> : <Moon size={20} />}
             label="Chế độ tối"
             onClick={toggleDarkMode}
             rightContent={
-              <div className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${darkMode ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-800'}`}>
-                <div className={`w-4 h-4 bg-white rounded-full transition-transform duration-300 ${darkMode ? 'translate-x-6' : 'translate-x-0'}`} />
+              <div
+                className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${darkMode ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-800'}`}
+              >
+                <div
+                  className={`w-4 h-4 bg-white rounded-full transition-transform duration-300 ${darkMode ? 'translate-x-6' : 'translate-x-0'}`}
+                />
               </div>
             }
           />
-          <SettingItem 
+          <SettingItem
             icon={<Bell size={20} />}
             label="Nhắc nhở chi tiêu"
             onClick={() => setShowReminders(true)}
@@ -101,30 +190,71 @@ export default function Settings() {
         </div>
       </section>
 
-      {/* Data Management */}
+      {/* Google Sheet — đồng bộ tự động phía server (Service Account) */}
       <section className="space-y-4">
-        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Dữ liệu & Bảo mật</h2>
-        
+        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">
+          Google Sheet
+        </h2>
+        <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-card-dark">
+          <div className="flex items-start gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+              <FileSpreadsheet size={24} />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-black text-slate-800 dark:text-white">Bảng Moni Flow</h3>
+              <p className="mt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                Giao dịch được đẩy lên Google Sheet sau vài giây khi bạn thêm hoặc sửa (không cần đăng nhập Google trong app).
+                Máy chỉ cần có Service Account và quyền sửa bảng — xem <code className="text-[10px]">.env.example</code>.
+              </p>
+              <a
+                href={GOOGLE_SHEET_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+              >
+                Mở bảng tính
+                <ExternalLink size={12} />
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Data: backup & reset */}
+      <section className="space-y-4">
+        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Dữ liệu &amp; bộ nhớ</h2>
+
         <div className="space-y-3">
-          <SettingItem 
+          <SettingItem
             icon={<Download size={20} className="text-blue-500" />}
-            label="Xuất dữ liệu (JSON)"
+            label="Xuất file backup (JSON)"
             onClick={handleExport}
             rightContent={<ChevronRight size={18} className="text-slate-300" />}
           />
-          <SettingItem 
+          <SettingItem
+            icon={<Upload size={20} className="text-emerald-500" />}
+            label="Khôi phục từ file backup (JSON)"
+            onClick={handlePickImportFile}
+            rightContent={<ChevronRight size={18} className="text-slate-300" />}
+          />
+          <SettingItem
+            icon={<RefreshCw size={20} className="text-amber-500" />}
+            label="Khởi động lại (giữ PayLater)"
+            onClick={handlePartialReset}
+            rightContent={<ChevronRight size={18} className="text-slate-300" />}
+          />
+          <SettingItem
             icon={<Trash2 size={20} className="text-red-500" />}
             label="Xóa toàn bộ dữ liệu"
             onClick={handleClearData}
             rightContent={<ChevronRight size={18} className="text-slate-300" />}
           />
-          <SettingItem 
-            icon={<RefreshCwIcon />}
-            label="Khởi động lại (Giữ PayLater)"
-            onClick={handlePartialReset}
-            rightContent={<ChevronRight size={18} className="text-slate-300" />}
-          />
         </div>
+
+        <p className="px-4 text-[10px] leading-relaxed text-slate-400 dark:text-slate-500">
+          Backup JSON gồm giao dịch, số dư ban đầu, giới hạn chi, hợp đồng và cài đặt liên quan. File chỉ là mảng giao
+          dịch (định dạng cũ) vẫn được hỗ trợ.
+        </p>
       </section>
 
       {/* About */}
@@ -145,15 +275,26 @@ export default function Settings() {
   );
 }
 
-function SettingItem({ icon, label, onClick, rightContent }: { icon: React.ReactNode, label: string, onClick?: () => void, rightContent?: React.ReactNode }) {
+function SettingItem({
+  icon,
+  label,
+  onClick,
+  rightContent,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick?: () => void;
+  rightContent?: React.ReactNode;
+}) {
   return (
-    <motion.button 
+    <motion.button
+      type="button"
       whileTap={onClick ? { scale: 0.98 } : {}}
       onClick={onClick}
-      className="w-full bg-white dark:bg-card-dark p-5 rounded-[28px] flex items-center justify-between shadow-sm border border-slate-50 dark:border-slate-800/50"
+      className="w-full bg-white dark:bg-card-dark p-5 rounded-[28px] flex items-center justify-between shadow-sm border border-slate-50 dark:border-slate-800/50 text-left"
     >
-      <div className="flex items-center space-x-4">
-        <div className="w-10 h-10 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-500 dark:text-slate-400 shadow-inner">
+      <div className="flex items-center space-x-4 min-w-0">
+        <div className="w-10 h-10 bg-slate-50 dark:bg-slate-900 rounded-2xl flex items-center justify-center text-slate-500 dark:text-slate-400 shadow-inner shrink-0">
           {icon}
         </div>
         <span className="text-sm font-bold text-slate-800 dark:text-white">{label}</span>

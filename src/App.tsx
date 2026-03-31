@@ -16,6 +16,7 @@ import Onboarding from './components/Onboarding';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFinanceStore } from './store/useFinanceStore';
 import { TransactionType } from './types';
+import { scheduleSyncToGoogleSheet } from './lib/syncGoogleSheet';
 
 type View = 'home' | 'timeline' | 'contracts' | 'tools' | 'reports' | 'settings';
 
@@ -26,6 +27,7 @@ export default function App() {
   const [showQuickOptions, setShowQuickOptions] = useState(false);
   const darkMode = useFinanceStore(state => state.darkMode);
   const hasCompletedOnboarding = useFinanceStore(state => state.hasCompletedOnboarding);
+  const transactions = useFinanceStore(state => state.transactions);
   const seedShopeeBills = useFinanceStore(state => state.seedShopeeBills);
   const seedMomoRealityMarch2026 = useFinanceStore(state => state.seedMomoRealityMarch2026);
   const seedFixedMonthlyIncome = useFinanceStore(state => state.seedFixedMonthlyIncome);
@@ -58,6 +60,11 @@ export default function App() {
       seedFacebookAdsSaoKeMar2026();
     }
   }, [hasCompletedOnboarding, seedShopeeBills, seedMomoRealityMarch2026, seedFixedMonthlyIncome, seedFacebookAdsSaoKeMar2026]);
+
+  useEffect(() => {
+    if (!hasCompletedOnboarding) return;
+    scheduleSyncToGoogleSheet(transactions);
+  }, [transactions, hasCompletedOnboarding]);
 
   const renderView = () => {
     switch (activeView) {

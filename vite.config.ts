@@ -22,7 +22,6 @@ export default defineConfig(({mode}) => {
       /** Chỉ dùng khi chạy `vite` riêng cổng 5173 + `tsx server.ts` cổng 3000. Mặc định dùng `npm run dev` (một server). */
       proxy: {
         '/api': { target: 'http://127.0.0.1:3000', changeOrigin: true },
-        '/auth': { target: 'http://127.0.0.1:3000', changeOrigin: true },
       },
     },
   };
