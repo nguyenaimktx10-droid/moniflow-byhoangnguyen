@@ -52,21 +52,45 @@ export function ensureGoogleOAuthDefaultsInStorage(): GoogleOAuthStored {
   return loadGoogleOAuthFromStorage();
 }
 
-/** Đẩy cấu hình lên server (bộ nhớ runtime) — gọi sau khi lưu localStorage. */
-export async function pushOAuthConfigToServer(data: GoogleOAuthStored): Promise<boolean> {
+export type PushOAuthResult =
+  | { ok: true }
+  | { ok: false; reason: 'http'; status: number; body: string }
+  | { ok: false; reason: 'network'; message: string };
+
+/** Trên Vercel: gọi cùng origin → vercel.json proxy sang Cloud Run (không CORS). */
+function urlForOauthConfigPost(): string {
   try {
-    const res = await fetch(apiUrl('/api/oauth/config'), {
+    if (typeof window !== 'undefined' && window.location.hostname.endsWith('.vercel.app')) {
+      return '/api/oauth/config';
+    }
+  } catch {
+    /* ignore */
+  }
+  return apiUrl('/api/oauth/config');
+}
+
+/** Đẩy cấu hình lên server (bộ nhớ runtime). Không dùng credentials — tránh CORS chặn cross-origin (Vercel → Cloud Run). */
+export async function pushOAuthConfigToServer(
+  data: GoogleOAuthStored
+): Promise<PushOAuthResult> {
+  const url = urlForOauthConfigPost();
+  try {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+      credentials: 'omit',
+      mode: 'cors',
       body: JSON.stringify({
         googleClientId: data.googleClientId,
         googleClientSecret: data.googleClientSecret,
         appUrl: data.appUrl,
       }),
     });
-    return res.ok;
-  } catch {
-    return false;
+    if (res.ok) return { ok: true };
+    const body = await res.text().catch(() => '');
+    return { ok: false, reason: 'http', status: res.status, body };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { ok: false, reason: 'network', message };
   }
 }

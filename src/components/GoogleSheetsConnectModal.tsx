@@ -64,10 +64,17 @@ export default function GoogleSheetsConnectModal({
     setConnecting(true);
     try {
       const pushed = await pushOAuthConfigToServer(payload);
-      if (!pushed) {
-        alert(
-          'Không gửi được cấu hình lên backend Cloud Run. Kiểm tra backend đang chạy và CORS; có thể đặt biến VITE_API_BASE_URL trên Vercel.'
-        );
+      if (!pushed.ok) {
+        const target = apiUrl('/api/oauth/config');
+        if (pushed.reason === 'http') {
+          alert(
+            `Không gửi được cấu hình (HTTP ${pushed.status}).\n\nGọi: ${target}\n\nNếu 403/404: backend Cloud Run cần deploy mới nhất và cho phép gọi không xác thực.`
+          );
+        } else {
+          alert(
+            `Lỗi mạng / CORS: ${pushed.message}\n\nThử: ${target}\nHoặc đặt VITE_API_BASE_URL trên Vercel = URL Cloud Run (không có / cuối).`
+          );
+        }
         return;
       }
       const res = await apiFetch('/api/auth/url');

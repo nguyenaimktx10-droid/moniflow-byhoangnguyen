@@ -43,6 +43,9 @@ app.use(
   cors({
     origin: true,
     credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    optionsSuccessStatus: 204,
   })
 );
 app.use(express.json({ limit: "50mb" }));
