@@ -66,7 +66,7 @@ export default function GoogleSheetsConnectModal({
       const pushed = await pushOAuthConfigToServer(payload);
       if (!pushed) {
         alert(
-          'Không gửi được cấu hình lên server. Kiểm tra npm run dev / npm start (backend có /api/oauth/config).'
+          'Không gửi được cấu hình lên backend Cloud Run. Kiểm tra backend đang chạy và CORS; có thể đặt biến VITE_API_BASE_URL trên Vercel.'
         );
         return;
       }
