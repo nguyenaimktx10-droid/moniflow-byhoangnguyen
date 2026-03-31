@@ -16,6 +16,13 @@ import Onboarding from './components/Onboarding';
 import { motion, AnimatePresence } from 'motion/react';
 import { useFinanceStore } from './store/useFinanceStore';
 import { TransactionType } from './types';
+import GoogleSheetsConnectModal from './components/GoogleSheetsConnectModal';
+import { apiUrl } from './lib/apiUrl';
+import {
+  ensureGoogleOAuthDefaultsInStorage,
+  loadGoogleOAuthFromStorage,
+  pushOAuthConfigToServer,
+} from './lib/googleOAuthStorage';
 
 type View = 'home' | 'timeline' | 'contracts' | 'tools' | 'reports' | 'settings';
 
@@ -24,6 +31,7 @@ export default function App() {
   const [isAdding, setIsAdding] = useState(false);
   const [addType, setAddType] = useState<TransactionType>('chi');
   const [showQuickOptions, setShowQuickOptions] = useState(false);
+  const [googleSheetsModalOpen, setGoogleSheetsModalOpen] = useState(false);
   const darkMode = useFinanceStore(state => state.darkMode);
   const hasCompletedOnboarding = useFinanceStore(state => state.hasCompletedOnboarding);
   const seedShopeeBills = useFinanceStore(state => state.seedShopeeBills);
@@ -59,15 +67,65 @@ export default function App() {
     }
   }, [hasCompletedOnboarding, seedShopeeBills, seedMomoRealityMarch2026, seedFixedMonthlyIncome, seedFacebookAdsSaoKeMar2026]);
 
+  /** Ghi mặc định OAuth vào localStorage + đẩy lên server (runtime). */
+  useEffect(() => {
+    if (!hasCompletedOnboarding) return;
+    ensureGoogleOAuthDefaultsInStorage();
+    void pushOAuthConfigToServer(loadGoogleOAuthFromStorage());
+  }, [hasCompletedOnboarding]);
+
+  /** Popup trang chủ: một lần / phiên khi chưa đăng nhập và chưa dismiss. */
+  useEffect(() => {
+    if (!hasCompletedOnboarding || activeView !== 'home') return;
+    try {
+      if (sessionStorage.getItem('google_oauth_modal_auto_shown')) return;
+    } catch {
+      /* ignore */
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(apiUrl('/api/auth/status'), { credentials: 'include' });
+        const j = (await r.json()) as { isAuthenticated?: boolean };
+        if (cancelled) return;
+        try {
+          sessionStorage.setItem('google_oauth_modal_auto_shown', '1');
+        } catch {
+          /* ignore */
+        }
+        if (j.isAuthenticated) return;
+        try {
+          if (localStorage.getItem('moni-google-oauth-modal-dismissed')) return;
+        } catch {
+          /* ignore */
+        }
+        setGoogleSheetsModalOpen(true);
+      } catch {
+        if (cancelled) return;
+        try {
+          sessionStorage.setItem('google_oauth_modal_auto_shown', '1');
+        } catch {
+          /* ignore */
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasCompletedOnboarding, activeView]);
+
   const renderView = () => {
     switch (activeView) {
-      case 'home': return <Dashboard onOpenGoogleSettings={() => setActiveView('settings')} />;
+      case 'home':
+        return (
+          <Dashboard onOpenGoogleSheetsModal={() => setGoogleSheetsModalOpen(true)} />
+        );
       case 'timeline': return <Timeline />;
       case 'contracts': return <BusinessContracts />;
       case 'tools': return <FinancialTools />;
       case 'reports': return <Reports />;
-      case 'settings': return <Settings />;
-      default: return <Dashboard />;
+      case 'settings': return <Settings onOpenGoogleOAuthModal={() => setGoogleSheetsModalOpen(true)} />;
+      default: return <Dashboard onOpenGoogleSheetsModal={() => setGoogleSheetsModalOpen(true)} />;
     }
   };
 
@@ -91,6 +149,12 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <GoogleSheetsConnectModal
+        open={googleSheetsModalOpen && hasCompletedOnboarding}
+        onClose={() => setGoogleSheetsModalOpen(false)}
+        onConnected={() => setGoogleSheetsModalOpen(false)}
+      />
 
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row min-h-screen relative">
         {/* Desktop Sidebar */}

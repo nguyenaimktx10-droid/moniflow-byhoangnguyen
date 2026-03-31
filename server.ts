@@ -12,6 +12,28 @@ dotenv.config();
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
+/** Cấu hình OAuth do client gửi (POST /api/oauth/config) — ghi đè env cho phiên làm việc. */
+const oauthRuntime: {
+  googleClientId: string;
+  googleClientSecret: string;
+  appUrl: string;
+} = {
+  googleClientId: "",
+  googleClientSecret: "",
+  appUrl: "",
+};
+
+function getEffectiveGoogleCreds() {
+  const clientId = (
+    oauthRuntime.googleClientId || process.env.GOOGLE_CLIENT_ID || ""
+  ).trim();
+  const clientSecret = (
+    oauthRuntime.googleClientSecret || process.env.GOOGLE_CLIENT_SECRET || ""
+  ).trim();
+  const appUrl = (oauthRuntime.appUrl || process.env.APP_URL || "").trim();
+  return { clientId, clientSecret, appUrl };
+}
+
 /** Cloud Run / production: NODE_ENV hoặc biến mặc định của nền tảng. */
 const isProduction =
   process.env.NODE_ENV === "production" || Boolean(process.env.K_SERVICE);
@@ -26,8 +48,12 @@ app.use(
 app.use(express.json({ limit: "50mb" }));
 app.use(cookieParser());
 
-/** Redirect URI phải trùng URL đang mở app (localhost hoặc Cloud Run). */
+/** Redirect URI: nếu có APP_URL (runtime hoặc env) thì dùng cố định; không thì theo request. */
 function getOAuthRedirectUri(req: express.Request): string {
+  const { appUrl } = getEffectiveGoogleCreds();
+  if (appUrl) {
+    return `${appUrl.replace(/\/$/, "")}/auth/callback`;
+  }
   const host = req.get("host") || `localhost:${PORT}`;
   let proto = (req.get("x-forwarded-proto") || req.protocol || "http").trim();
   if (proto.includes(",")) proto = proto.split(",")[0].trim();
@@ -36,16 +62,13 @@ function getOAuthRedirectUri(req: express.Request): string {
 }
 
 function createOAuth2Client(req: express.Request) {
-  const id = process.env.GOOGLE_CLIENT_ID;
-  const secret = process.env.GOOGLE_CLIENT_SECRET;
-  return new google.auth.OAuth2(id, secret, getOAuthRedirectUri(req));
+  const { clientId, clientSecret } = getEffectiveGoogleCreds();
+  return new google.auth.OAuth2(clientId, clientSecret, getOAuthRedirectUri(req));
 }
 
 function createBareOAuth2Client() {
-  return new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET
-  );
+  const { clientId, clientSecret } = getEffectiveGoogleCreds();
+  return new google.auth.OAuth2(clientId, clientSecret);
 }
 
 function getSessionCookieOpts(req: express.Request): CookieOptions {
@@ -74,10 +97,11 @@ function clearSessionCookieOpts(req: express.Request): CookieOptions {
 }
 
 function requireGoogleEnv(res: express.Response): boolean {
-  if (!process.env.GOOGLE_CLIENT_ID?.trim() || !process.env.GOOGLE_CLIENT_SECRET?.trim()) {
+  const { clientId, clientSecret } = getEffectiveGoogleCreds();
+  if (!clientId || !clientSecret) {
     res.status(503).json({
       error:
-        "Chưa cấu hình GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET trên server (biến môi trường hoặc file .env).",
+        "Chưa cấu hình GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET (biến môi trường, .env hoặc form Kết nối Google trong app).",
       code: "MISSING_OAUTH_ENV",
     });
     return false;
@@ -88,6 +112,24 @@ function requireGoogleEnv(res: express.Response): boolean {
 // API routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
+});
+
+app.post("/api/oauth/config", (req, res) => {
+  const body = req.body as {
+    googleClientId?: string;
+    googleClientSecret?: string;
+    appUrl?: string;
+  };
+  if (typeof body.googleClientId === "string") {
+    oauthRuntime.googleClientId = body.googleClientId;
+  }
+  if (typeof body.googleClientSecret === "string") {
+    oauthRuntime.googleClientSecret = body.googleClientSecret;
+  }
+  if (typeof body.appUrl === "string") {
+    oauthRuntime.appUrl = body.appUrl.trim();
+  }
+  res.json({ ok: true });
 });
 
 app.get("/api/auth/url", (req, res) => {
@@ -117,7 +159,8 @@ app.get("/auth/callback", async (req, res) => {
   if (!code || typeof code !== "string") {
     return res.status(400).send("Missing authorization code");
   }
-  if (!process.env.GOOGLE_CLIENT_ID?.trim() || !process.env.GOOGLE_CLIENT_SECRET?.trim()) {
+  const { clientId, clientSecret } = getEffectiveGoogleCreds();
+  if (!clientId || !clientSecret) {
     return res.status(503).send("Server OAuth chưa được cấu hình.");
   }
   try {

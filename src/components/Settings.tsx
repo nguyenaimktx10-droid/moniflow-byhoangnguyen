@@ -1,45 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { formatCurrency } from '../lib/utils';
-import { Trash2, Download, Info, Moon, Sun, ChevronRight, Shield, Bell, FileSpreadsheet, LogOut, RefreshCw, ExternalLink, Copy, Link2 } from 'lucide-react';
-import { DEFAULT_APP_URL_CLOUD_RUN } from '../constants/googleOAuthDefaults';
+import { Trash2, Download, Info, Moon, Sun, ChevronRight, Shield, Bell, FileSpreadsheet, LogOut, RefreshCw, ExternalLink } from 'lucide-react';
 import { apiUrl } from '../lib/apiUrl';
 import { motion, AnimatePresence } from 'motion/react';
 import SpendingReminders from './SpendingReminders';
 
-export default function Settings() {
+type SettingsProps = {
+  /** Mở popup kết nối Google (trang chủ / overlay) */
+  onOpenGoogleOAuthModal: () => void;
+};
+
+export default function Settings({ onOpenGoogleOAuthModal }: SettingsProps) {
   const { initialBalance, setInitialBalance, transactions, darkMode, toggleDarkMode, spreadsheetId, setSpreadsheetId, resetAllData, resetExceptPayLater } = useFinanceStore();
   const [showReminders, setShowReminders] = useState(false);
   const [isGoogleAuthenticated, setIsGoogleAuthenticated] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  /** Form hỗ trợ CEO dán credential — Client Secret không lưu localStorage */
-  const [googleClientId, setGoogleClientId] = useState('');
-  const [googleClientSecret, setGoogleClientSecret] = useState('');
-  const [appUrl, setAppUrl] = useState(DEFAULT_APP_URL_CLOUD_RUN);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('moni-google-oauth-form');
-      if (raw) {
-        const j = JSON.parse(raw) as { googleClientId?: string; appUrl?: string };
-        if (typeof j.googleClientId === 'string') setGoogleClientId(j.googleClientId);
-        if (typeof j.appUrl === 'string' && j.appUrl.trim()) setAppUrl(j.appUrl.trim());
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        'moni-google-oauth-form',
-        JSON.stringify({ googleClientId, appUrl })
-      );
-    } catch {
-      /* ignore */
-    }
-  }, [googleClientId, appUrl]);
 
   useEffect(() => {
     checkAuthStatus();
@@ -63,39 +39,6 @@ export default function Settings() {
       setIsGoogleAuthenticated(data.isAuthenticated);
     } catch (error) {
       console.error("Failed to check auth status:", error);
-    }
-  };
-
-  const handleGoogleConnect = async () => {
-    try {
-      const res = await apiFetch('/api/auth/url');
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        if (res.status === 404) {
-          alert(
-            'API trả 404 — backend Node chưa chạy hoặc sai URL. Trên máy: dùng "npm run dev" hoặc sau build: "npm start" / "npm run preview". Không dùng lệnh "vite preview" một mình (không có /api). Trên Cloud Run: CMD phải là npm start (tsx server.ts).'
-          );
-          return;
-        }
-        alert(
-          data.error ||
-            `Không lấy được link Google (${res.status}). Kiểm tra biến môi trường trên server.`
-        );
-        return;
-      }
-      if (!data.url || typeof data.url !== 'string') {
-        alert('Phản hồi server không hợp lệ (thiếu URL OAuth).');
-        return;
-      }
-      const popup = window.open(data.url, 'google_oauth', 'width=600,height=700');
-      if (!popup) {
-        alert('Trình duyệt đã chặn cửa sổ popup. Hãy cho phép popup cho trang này và thử lại.');
-      }
-    } catch (error) {
-      console.error("Failed to get auth URL:", error);
-      alert(
-        'Lỗi mạng hoặc không kết nối được API. Chạy: npm run dev (một server). Sau build: npm start hoặc npm run preview — không chỉ "vite preview".'
-      );
     }
   };
 
@@ -129,24 +72,6 @@ export default function Settings() {
     } finally {
       setIsSyncing(false);
     }
-  };
-
-  const copyText = async (label: string, text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      alert(`Đã sao chép ${label}`);
-    } catch {
-      alert('Không sao chép được. Hãy chọn và copy thủ công.');
-    }
-  };
-
-  const copyEnvBlock = () => {
-    const block = [
-      `GOOGLE_CLIENT_ID=${googleClientId.trim() || '(dán Client ID)'}`,
-      `GOOGLE_CLIENT_SECRET=${googleClientSecret.trim() || '(dán Client Secret)'}`,
-      `APP_URL=${appUrl.trim() || DEFAULT_APP_URL_CLOUD_RUN}`,
-    ].join('\n');
-    void copyText('khối biến môi trường', block);
   };
 
   const handleExport = () => {
@@ -220,121 +145,24 @@ export default function Settings() {
         </p>
       </section>
 
-      {/* Cấu hình OAuth — Cloud Run / .env */}
-      <section id="google-oauth-config" className="space-y-4">
+      {/* Google Sheets — form OAuth nằm ở popup trang chủ */}
+      <section className="space-y-4">
         <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 text-center md:text-left">
-          Kết nối Google Cloud
+          Kết nối Google
         </h2>
-        <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-card-dark space-y-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              <Link2 size={22} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white">
-                OAuth &amp; biến môi trường
-              </h3>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-                Dán <strong className="text-slate-700 dark:text-slate-200">Client ID</strong> và{' '}
-                <strong className="text-slate-700 dark:text-slate-200">Client Secret</strong> từ Google Cloud
-                Console (APIs và Services → Credentials). Trên Cloud Run, thêm cùng tên biến;{' '}
-                <strong className="text-slate-700 dark:text-slate-200">APP_URL</strong> phải trùng URL
-                dịch vụ (redirect: <code className="text-[10px]">/auth/callback</code>).
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3 pt-2">
-            <label className="block">
-              <span className="mb-1.5 block text-[9px] font-black uppercase tracking-tighter text-slate-400">
-                GOOGLE_CLIENT_ID
-              </span>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={googleClientId}
-                  onChange={(e) => setGoogleClientId(e.target.value)}
-                  placeholder="Dán mã Client ID bạn vừa copy"
-                  autoComplete="off"
-                  className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                />
-                <button
-                  type="button"
-                  onClick={() => copyText('GOOGLE_CLIENT_ID', googleClientId)}
-                  className="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-slate-500 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:hover:text-emerald-400"
-                  title="Sao chép"
-                >
-                  <Copy size={18} />
-                </button>
-              </div>
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-[9px] font-black uppercase tracking-tighter text-slate-400">
-                GOOGLE_CLIENT_SECRET
-              </span>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={googleClientSecret}
-                  onChange={(e) => setGoogleClientSecret(e.target.value)}
-                  placeholder="Dán mã Client Secret bạn vừa copy"
-                  autoComplete="off"
-                  className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                />
-                <button
-                  type="button"
-                  onClick={() => copyText('GOOGLE_CLIENT_SECRET', googleClientSecret)}
-                  className="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-slate-500 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:hover:text-emerald-400"
-                  title="Sao chép"
-                >
-                  <Copy size={18} />
-                </button>
-              </div>
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-[9px] font-black uppercase tracking-tighter text-slate-400">
-                APP_URL
-              </span>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={appUrl}
-                  onChange={(e) => setAppUrl(e.target.value)}
-                  placeholder={DEFAULT_APP_URL_CLOUD_RUN}
-                  className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-mono font-medium text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                />
-                <button
-                  type="button"
-                  onClick={() => copyText('APP_URL', appUrl.trim() || DEFAULT_APP_URL_CLOUD_RUN)}
-                  className="shrink-0 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-slate-500 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:hover:text-emerald-400"
-                  title="Sao chép"
-                >
-                  <Copy size={18} />
-                </button>
-              </div>
-            </label>
-          </div>
-
-          <p className="rounded-2xl bg-amber-50/90 p-3 text-[10px] font-medium leading-relaxed text-amber-950/90 dark:bg-amber-950/30 dark:text-amber-100/90">
-            Client Secret chỉ nhập trên máy an toàn; không gửi lên server qua form này — dùng để sao chép
-            vào Secret Manager hoặc biến môi trường Cloud Run.
+        <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-card-dark">
+          <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+            Nhập Client ID, Secret và APP_URL trong{' '}
+            <strong className="text-slate-700 dark:text-slate-200">popup trên trang chủ</strong>, rồi bấm
+            Kết nối để lưu vào hệ thống.
           </p>
-
           <button
             type="button"
-            onClick={copyEnvBlock}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 py-3.5 text-[10px] font-black uppercase tracking-widest text-emerald-800 transition-colors hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-200 dark:hover:bg-emerald-900/30"
+            onClick={onOpenGoogleOAuthModal}
+            className="mt-4 w-full rounded-2xl border border-emerald-200 bg-emerald-50 py-3.5 text-[10px] font-black uppercase tracking-widest text-emerald-800 transition-colors hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-200 dark:hover:bg-emerald-900/30"
           >
-            <Copy size={16} />
-            Sao chép khối .env (3 dòng)
+            Mở form kết nối Google
           </button>
-
-          <p className="text-[10px] text-slate-400 dark:text-slate-500">
-            Redirect URI đăng ký trên Google:{' '}
-            <code className="break-all rounded bg-slate-100 px-1.5 py-0.5 text-[10px] dark:bg-slate-800">
-              {(appUrl.trim() || DEFAULT_APP_URL_CLOUD_RUN).replace(/\/$/, '')}/auth/callback
-            </code>
-          </p>
         </div>
       </section>
 
@@ -358,7 +186,8 @@ export default function Settings() {
             
             {!isGoogleAuthenticated ? (
               <button 
-                onClick={handleGoogleConnect}
+                type="button"
+                onClick={onOpenGoogleOAuthModal}
                 className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20"
               >
                 Kết nối
