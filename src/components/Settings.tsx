@@ -30,6 +30,7 @@ export default function Settings() {
     businessContracts,
     darkMode,
     hasCompletedOnboarding,
+    disableDemoSeeds,
     toggleDarkMode,
     resetAllData,
     resetExceptPayLater,
@@ -76,6 +77,7 @@ export default function Settings() {
       businessContracts,
       darkMode,
       hasCompletedOnboarding,
+      disableDemoSeeds,
     };
     const data = JSON.stringify(payload, null, 2);
     const blob = new Blob([data], { type: 'application/json' });

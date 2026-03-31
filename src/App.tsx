@@ -27,6 +27,7 @@ export default function App() {
   const [showQuickOptions, setShowQuickOptions] = useState(false);
   const darkMode = useFinanceStore(state => state.darkMode);
   const hasCompletedOnboarding = useFinanceStore(state => state.hasCompletedOnboarding);
+  const disableDemoSeeds = useFinanceStore(state => state.disableDemoSeeds);
   const transactions = useFinanceStore(state => state.transactions);
   const seedShopeeBills = useFinanceStore(state => state.seedShopeeBills);
   const seedMomoRealityMarch2026 = useFinanceStore(state => state.seedMomoRealityMarch2026);
@@ -53,13 +54,19 @@ export default function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    if (hasCompletedOnboarding) {
-      seedShopeeBills();
-      seedMomoRealityMarch2026();
-      seedFixedMonthlyIncome();
-      seedFacebookAdsSaoKeMar2026();
-    }
-  }, [hasCompletedOnboarding, seedShopeeBills, seedMomoRealityMarch2026, seedFixedMonthlyIncome, seedFacebookAdsSaoKeMar2026]);
+    if (!hasCompletedOnboarding || disableDemoSeeds) return;
+    seedShopeeBills();
+    seedMomoRealityMarch2026();
+    seedFixedMonthlyIncome();
+    seedFacebookAdsSaoKeMar2026();
+  }, [
+    hasCompletedOnboarding,
+    disableDemoSeeds,
+    seedShopeeBills,
+    seedMomoRealityMarch2026,
+    seedFixedMonthlyIncome,
+    seedFacebookAdsSaoKeMar2026,
+  ]);
 
   useEffect(() => {
     if (!hasCompletedOnboarding) return;

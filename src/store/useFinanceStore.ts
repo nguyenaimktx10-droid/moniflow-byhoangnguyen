@@ -30,6 +30,8 @@ interface FinanceState {
   initialBalance: number;
   darkMode: boolean;
   hasCompletedOnboarding: boolean;
+  /** Sau "Xóa toàn bộ dữ liệu" = true — không tự nhập lại giao dịch demo (seed) khi vào lại app. */
+  disableDemoSeeds: boolean;
   spendingLimits: SpendingLimit[];
   businessContracts: BusinessContract[];
   addTransaction: (t: Omit<Transaction, 'id'>) => void;
@@ -73,11 +75,12 @@ interface FinanceState {
 
 export const useFinanceStore = create<FinanceState>()(
   persist(
-    (set, get) => ({
+    (set, get, api) => ({
       transactions: [],
       initialBalance: 0,
       darkMode: false,
       hasCompletedOnboarding: false,
+      disableDemoSeeds: false,
       spendingLimits: [],
       businessContracts: [],
 
@@ -128,13 +131,17 @@ export const useFinanceStore = create<FinanceState>()(
         spendingLimits: state.spendingLimits.filter(l => l.id !== id)
       })),
 
-      resetAllData: () => set({
-        transactions: [],
-        initialBalance: 0,
-        spendingLimits: [],
-        businessContracts: [],
-        hasCompletedOnboarding: false
-      }),
+      resetAllData: () => {
+        api.persist.clearStorage();
+        set({
+          transactions: [],
+          initialBalance: 0,
+          spendingLimits: [],
+          businessContracts: [],
+          hasCompletedOnboarding: false,
+          disableDemoSeeds: true,
+        });
+      },
 
       resetExceptPayLater: () => set((state) => ({
         transactions: state.transactions.filter(t => 
@@ -206,6 +213,10 @@ export const useFinanceStore = create<FinanceState>()(
             typeof o.hasCompletedOnboarding === 'boolean'
               ? o.hasCompletedOnboarding
               : true,
+          disableDemoSeeds:
+            typeof o.disableDemoSeeds === 'boolean'
+              ? o.disableDemoSeeds
+              : get().disableDemoSeeds,
         });
       },
 
