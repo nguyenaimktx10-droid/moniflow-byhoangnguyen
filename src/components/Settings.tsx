@@ -17,6 +17,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import SpendingReminders from './SpendingReminders';
 import { GOOGLE_SHEET_URL } from '../constants/googleSheets';
+import { apiUrl } from '../lib/apiUrl';
 
 const BACKUP_VERSION = 1 as const;
 
@@ -36,7 +37,34 @@ export default function Settings() {
   } = useFinanceStore();
 
   const [showReminders, setShowReminders] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSyncSheets = async () => {
+    setIsSyncing(true);
+    try {
+      const res = await fetch(apiUrl('/api/sync-sheets'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactions }),
+      });
+      const data = (await res.json()) as { success?: boolean; error?: string };
+      if (res.ok && data.success) {
+        alert('Đã đồng bộ dữ liệu lên Google Sheet.');
+      } else {
+        alert(
+          data.error ||
+            (res.status === 503
+              ? 'Server chưa cấu hình Service Account (GOOGLE_SERVICE_ACCOUNT_JSON hoặc GOOGLE_APPLICATION_CREDENTIALS).'
+              : `Đồng bộ thất bại (${res.status}).`)
+        );
+      }
+    } catch {
+      alert('Không kết nối được API. Kiểm tra backend và VITE_API_BASE_URL nếu FE tách domain.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleExport = () => {
     const payload = {
@@ -196,26 +224,37 @@ export default function Settings() {
           Google Sheet
         </h2>
         <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-card-dark">
-          <div className="flex items-start gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
-              <FileSpreadsheet size={24} />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400">
+                <FileSpreadsheet size={24} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-black text-slate-800 dark:text-white">Bảng Moni Flow</h3>
+                <p className="mt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                  Giao dịch được đẩy lên Google Sheet sau vài giây khi bạn thêm hoặc sửa (không cần đăng nhập Google trong app).
+                  Máy chỉ cần có Service Account và quyền sửa bảng — xem <code className="text-[10px]">.env.example</code>.
+                </p>
+                <a
+                  href={GOOGLE_SHEET_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                >
+                  Mở bảng tính
+                  <ExternalLink size={12} />
+                </a>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white">Bảng Moni Flow</h3>
-              <p className="mt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-                Giao dịch được đẩy lên Google Sheet sau vài giây khi bạn thêm hoặc sửa (không cần đăng nhập Google trong app).
-                Máy chỉ cần có Service Account và quyền sửa bảng — xem <code className="text-[10px]">.env.example</code>.
-              </p>
-              <a
-                href={GOOGLE_SHEET_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
-              >
-                Mở bảng tính
-                <ExternalLink size={12} />
-              </a>
-            </div>
+            <button
+              type="button"
+              onClick={() => void handleSyncSheets()}
+              disabled={isSyncing}
+              className="flex shrink-0 items-center justify-center gap-2 self-start rounded-2xl bg-slate-800 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-opacity disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900 sm:self-center"
+            >
+              <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+              {isSyncing ? 'Đang đồng bộ…' : 'Đồng bộ lên Sheet'}
+            </button>
           </div>
         </div>
       </section>
