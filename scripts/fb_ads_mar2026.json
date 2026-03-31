@@ -1,0 +1,339 @@
+{
+  "source": "c:\\Users\\ADMIN\\Downloads\\Telegram Desktop\\SaoKeTK_01032026_30032026.xlsx",
+  "count": 47,
+  "monthTotals": {
+    "2026-03": 9891681
+  },
+  "grandTotal": 9891681,
+  "transactions": [
+    {
+      "date": "2026-03-02",
+      "amount": 239815,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 01/03/2026 TAI FACEBK *8WNG7HDNG2 fb.me/ads IE APPCODE 792613",
+      "ref": "FT26061612007558",
+      "row": 38
+    },
+    {
+      "date": "2026-03-02",
+      "amount": 229013,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 02/03/2026 TAI FACEBK *P45F8DMX82 Dublin IE APPCODE 76737",
+      "ref": "FT26061609716997",
+      "row": 40
+    },
+    {
+      "date": "2026-03-02",
+      "amount": 245743,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 02/03/2026 TAI FACEBK *FS9JLG5NG2 fb.me/ads IE APPCODE 430773",
+      "ref": "FT26061998260652",
+      "row": 42
+    },
+    {
+      "date": "2026-03-02",
+      "amount": 491309,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 02/03/2026 TAI FACEBK *DNFXQFRNG2 fb.me/ads IE APPCODE 430909",
+      "ref": "FT26061027438340",
+      "row": 44
+    },
+    {
+      "date": "2026-03-03",
+      "amount": 232463,
+      "note": "FB Ads — GD THE QUA POS SO THE 478097...3818 NGAY 03/03/2026 TAI FACEBK *S84S9CZX82 fb.me/ads IE APPCODE 129196 TID 99999999",
+      "ref": "FT26062403399278",
+      "row": 60
+    },
+    {
+      "date": "2026-03-04",
+      "amount": 149994,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 04/03/2026 TAI FACEBK *QPMAEFZMG2 FACEBOOK.COM IE APPCODE 626697",
+      "ref": "FT26063001063933",
+      "row": 62
+    },
+    {
+      "date": "2026-03-04",
+      "amount": 64555,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 04/03/2026 TAI FACEBK *CMWBMG9NG2 fb.me/ads IE APPCODE 843834",
+      "ref": "FT26063513959051",
+      "row": 66
+    },
+    {
+      "date": "2026-03-04",
+      "amount": 309088,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 04/03/2026 TAI FACEBK *94XBMG9NG2 fb.me/ads IE APPCODE 843991",
+      "ref": "FT26063307969290",
+      "row": 68
+    },
+    {
+      "date": "2026-03-05",
+      "amount": 229013,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 04/03/2026 TAI FACEBK *BKR3VC5Y82 Dublin IE APPCODE 63212",
+      "ref": "FT26064579490407",
+      "row": 72
+    },
+    {
+      "date": "2026-03-06",
+      "amount": 2152,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 06/03/2026 TAI FACEBK *83LHWKHNG2 fb.me/ads IE APPCODE 932843",
+      "ref": "FT26065701505005",
+      "row": 101
+    },
+    {
+      "date": "2026-03-06",
+      "amount": 84269,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 06/03/2026 TAI FACEBK *E2ADNED562 fb.me/ads IE APPCODE 976203",
+      "ref": "FT26065033902160",
+      "row": 103
+    },
+    {
+      "date": "2026-03-07",
+      "amount": 10234,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 07/03/2026 TAI FACEBK *QKKKYEH462 Dublin IE APPCODE 708629",
+      "ref": "FT26066297467110",
+      "row": 105
+    },
+    {
+      "date": "2026-03-09",
+      "amount": 133997,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 09/03/2026 TAI FACEBK *BCE36HMNG2 fb.me/ads IE APPCODE 840850",
+      "ref": "FT26068951707539",
+      "row": 110
+    },
+    {
+      "date": "2026-03-09",
+      "amount": 45866,
+      "note": "FB Ads — GD THE QUA POS SO THE 478097...3818 NGAY 09/03/2026 TAI FACEBK *U9PW5FH462 fb.me/ads IE APPCODE 841154 TID 99999999",
+      "ref": "FT26068339770731",
+      "row": 112
+    },
+    {
+      "date": "2026-03-09",
+      "amount": 120900,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 09/03/2026 TAI FACEBK *RDH8FED462 fb.me/ads IE APPCODE 851394",
+      "ref": "FT26068580438200",
+      "row": 114
+    },
+    {
+      "date": "2026-03-09",
+      "amount": 229776,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 09/03/2026 TAI FACEBK *JP9ADEMY82 Dublin IE APPCODE 858438",
+      "ref": "FT26068080838979",
+      "row": 118
+    },
+    {
+      "date": "2026-03-09",
+      "amount": 539,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 09/03/2026 TAI FACEBK *SK959H5NG2 fb.me/ads IE APPCODE 219631",
+      "ref": "FT26068468640170",
+      "row": 143
+    },
+    {
+      "date": "2026-03-09",
+      "amount": 476021,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 09/03/2026 TAI FACEBK *BHYZ3H9NG2 fb.me/ads IE APPCODE 219832",
+      "ref": "FT26068495004534",
+      "row": 145
+    },
+    {
+      "date": "2026-03-11",
+      "amount": 229013,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 10/03/2026 TAI FACEBK *PLDRBE9Y82 Dublin IE APPCODE 929939",
+      "ref": "FT26070296411616",
+      "row": 156
+    },
+    {
+      "date": "2026-03-11",
+      "amount": 18132,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 10/03/2026 TAI FACEBK *PKUBLEHY82 Dublin IE APPCODE 940005",
+      "ref": "FT26070089005858",
+      "row": 158
+    },
+    {
+      "date": "2026-03-11",
+      "amount": 338530,
+      "note": "FB Ads — GD THE QUA POS SO THE 478097...3818 NGAY 10/03/2026 TAI FACEBK *2KNEQJVMG2 fb.me/ads IE APPCODE 945256 TID 99999999",
+      "ref": "FT26070469033135",
+      "row": 168
+    },
+    {
+      "date": "2026-03-11",
+      "amount": 229013,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 11/03/2026 TAI FACEBK *DTAKFD5Y82 Dublin IE APPCODE 184724",
+      "ref": "FT26070986051409",
+      "row": 176
+    },
+    {
+      "date": "2026-03-11",
+      "amount": 324206,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 11/03/2026 TAI FACEBK *AJRUDLHNG2 fb.me/ads IE APPCODE 512835",
+      "ref": "FT26070579081149",
+      "row": 184
+    },
+    {
+      "date": "2026-03-13",
+      "amount": 229013,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 12/03/2026 TAI FACEBK *VU89RFRX82 Dublin IE APPCODE 155328",
+      "ref": "FT26072105508429",
+      "row": 216
+    },
+    {
+      "date": "2026-03-13",
+      "amount": 215559,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 13/03/2026 TAI FACEBK *BHY2PGRNG2 fb.me/ads IE APPCODE 233818",
+      "ref": "FT26072245622342",
+      "row": 218
+    },
+    {
+      "date": "2026-03-13",
+      "amount": 229013,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 13/03/2026 TAI FACEBK *WVAETGVX82 Dublin IE APPCODE 743202",
+      "ref": "FT26072579089151",
+      "row": 224
+    },
+    {
+      "date": "2026-03-13",
+      "amount": 263937,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 13/03/2026 TAI FACEBK *7SSXJHMNG2 fb.me/ads IE APPCODE 758421",
+      "ref": "FT26072003110489",
+      "row": 226
+    },
+    {
+      "date": "2026-03-16",
+      "amount": 170973,
+      "note": "FB Ads — GD THE QUA POS SO THE 478097...3818 NGAY 15/03/2026 TAI FACEBK *TTZHQLHNG2 fb.me/ads IE APPCODE 711885 TID 99999999",
+      "ref": "FT26075265460005",
+      "row": 233
+    },
+    {
+      "date": "2026-03-16",
+      "amount": 229013,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 15/03/2026 TAI FACEBK *23C42FHY82 Dublin IE APPCODE 933920",
+      "ref": "FT26075056385368",
+      "row": 240
+    },
+    {
+      "date": "2026-03-16",
+      "amount": 231874,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 15/03/2026 TAI FACEBK *C7X47KVMG2 fb.me/ads IE APPCODE 122892",
+      "ref": "FT26075714609133",
+      "row": 245
+    },
+    {
+      "date": "2026-03-16",
+      "amount": 526544,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 16/03/2026 TAI FACEBK *SQ3CJJDNG2 FACEBOOK.COM IE APPCODE 491356",
+      "ref": "FT26075801438101",
+      "row": 251
+    },
+    {
+      "date": "2026-03-16",
+      "amount": 229013,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 16/03/2026 TAI FACEBK *QL2VHEMX82 Dublin IE APPCODE 667500",
+      "ref": "FT26075401855140",
+      "row": 261
+    },
+    {
+      "date": "2026-03-17",
+      "amount": 293269,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 17/03/2026 TAI FACEBK *K3C7LGZMG2 fb.me/ads IE APPCODE 61761",
+      "ref": "FT26076236009956",
+      "row": 263
+    },
+    {
+      "date": "2026-03-19",
+      "amount": 12857,
+      "note": "FB Ads — GD THE QUA POS SO THE 478097...3818 NGAY 19/03/2026 TAI FACEBK *349NRJDNG2 fb.me/ads IE APPCODE 973710 TID 99999999",
+      "ref": "FT26078052695403",
+      "row": 278
+    },
+    {
+      "date": "2026-03-19",
+      "amount": 227417,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 19/03/2026 TAI FACEBK *HQ2HQGZMG2 fb.me/ads IE APPCODE 973759",
+      "ref": "FT26078407704038",
+      "row": 280
+    },
+    {
+      "date": "2026-03-19",
+      "amount": 229013,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 19/03/2026 TAI FACEBK *GRMJ7E5Y82 fb.me/ads IE APPCODE 366927",
+      "ref": "FT26078318213930",
+      "row": 285
+    },
+    {
+      "date": "2026-03-19",
+      "amount": 121519,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 19/03/2026 TAI FACEBK *BJ9B6J5NG2 fb.me/ads IE APPCODE 454136",
+      "ref": "FT26078425913436",
+      "row": 287
+    },
+    {
+      "date": "2026-03-21",
+      "amount": 229013,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 21/03/2026 TAI FACEBK *PTB8PEDY82 fb.me/ads IE APPCODE 214916",
+      "ref": "FT26080215056063",
+      "row": 297
+    },
+    {
+      "date": "2026-03-23",
+      "amount": 229013,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 22/03/2026 TAI FACEBK *Y4YNLFMY82 fb.me/ads IE APPCODE 41801",
+      "ref": "FT26082270027416",
+      "row": 314
+    },
+    {
+      "date": "2026-03-23",
+      "amount": 229013,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 23/03/2026 TAI FACEBK *2P8G7FMX82 fb.me/ads IE APPCODE 683741",
+      "ref": "FT26082359304145",
+      "row": 316
+    },
+    {
+      "date": "2026-03-24",
+      "amount": 229128,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 23/03/2026 TAI FACEBK *37GLQHRNG2 FACEBOOK.COM IE APPCODE 953622",
+      "ref": "FT26083086450046",
+      "row": 321
+    },
+    {
+      "date": "2026-03-24",
+      "amount": 346,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 24/03/2026 TAI FACEBK *3LF6MMHNG2 fb.me/ads IE APPCODE 239392",
+      "ref": "FT26083270107896",
+      "row": 325
+    },
+    {
+      "date": "2026-03-24",
+      "amount": 429851,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 24/03/2026 TAI FACEBK *WSTG2LVMG2 fb.me/ads IE APPCODE 239647",
+      "ref": "FT26083179415580",
+      "row": 327
+    },
+    {
+      "date": "2026-03-25",
+      "amount": 212933,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 25/03/2026 TAI FACEBK *KWF45LVMG2 fb.me/ads IE APPCODE 671425",
+      "ref": "FT26084120840703",
+      "row": 332
+    },
+    {
+      "date": "2026-03-25",
+      "amount": 229700,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 25/03/2026 TAI FACEBK *M2D85FDY82 fb.me/ads IE APPCODE 759016",
+      "ref": "FT26084006201880",
+      "row": 334
+    },
+    {
+      "date": "2026-03-26",
+      "amount": 229013,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 26/03/2026 TAI FACEBK *3AAU2JVX82 fb.me/ads IE APPCODE 407046",
+      "ref": "FT26085712270048",
+      "row": 339
+    },
+    {
+      "date": "2026-03-26",
+      "amount": 231016,
+      "note": "FB Ads — GD THE TREN INTERNET SO THE 478097...3818 NGAY 26/03/2026 TAI FACEBK *723RPJ9NG2 fb.me/ads IE APPCODE 482535",
+      "ref": "FT26085217537534",
+      "row": 341
+    }
+  ]
+}
