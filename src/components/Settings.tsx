@@ -3,6 +3,7 @@ import { useFinanceStore } from '../store/useFinanceStore';
 import { formatCurrency } from '../lib/utils';
 import { Trash2, Download, Info, Moon, Sun, ChevronRight, Shield, Bell, FileSpreadsheet, LogOut, RefreshCw, ExternalLink, Copy, Link2 } from 'lucide-react';
 import { DEFAULT_APP_URL_CLOUD_RUN } from '../constants/googleOAuthDefaults';
+import { apiUrl } from '../lib/apiUrl';
 import { motion, AnimatePresence } from 'motion/react';
 import SpendingReminders from './SpendingReminders';
 
@@ -52,8 +53,8 @@ export default function Settings() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  const apiFetch = (input: string, init?: RequestInit) =>
-    fetch(input, { ...init, credentials: 'include' });
+  const apiFetch = (pathname: string, init?: RequestInit) =>
+    fetch(apiUrl(pathname), { ...init, credentials: 'include' });
 
   const checkAuthStatus = async () => {
     try {
@@ -70,6 +71,12 @@ export default function Settings() {
       const res = await apiFetch('/api/auth/url');
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (res.status === 404) {
+          alert(
+            'API trả 404 — backend Node chưa chạy hoặc sai URL. Trên máy: dùng "npm run dev" hoặc sau build: "npm start" / "npm run preview". Không dùng lệnh "vite preview" một mình (không có /api). Trên Cloud Run: CMD phải là npm start (tsx server.ts).'
+          );
+          return;
+        }
         alert(
           data.error ||
             `Không lấy được link Google (${res.status}). Kiểm tra biến môi trường trên server.`
@@ -86,7 +93,9 @@ export default function Settings() {
       }
     } catch (error) {
       console.error("Failed to get auth URL:", error);
-      alert('Lỗi mạng hoặc không kết nối được server. Chạy app bằng lệnh npm run dev (cổng 3000).');
+      alert(
+        'Lỗi mạng hoặc không kết nối được API. Chạy: npm run dev (một server). Sau build: npm start hoặc npm run preview — không chỉ "vite preview".'
+      );
     }
   };
 
@@ -363,6 +372,12 @@ export default function Settings() {
               </button>
             )}
           </div>
+          <p className="text-[10px] text-slate-400 leading-relaxed">
+            Nút này gọi API <code className="text-[9px]">/api/auth/url</code> — cần chạy{' '}
+            <strong className="text-slate-600 dark:text-slate-300">npm run dev</strong> hoặc sau build{' '}
+            <strong className="text-slate-600 dark:text-slate-300">npm start</strong> (không chỉ &quot;vite
+            preview&quot;). Cloud Run: lệnh khởi động phải là <code className="text-[9px]">npm start</code>.
+          </p>
 
           {isGoogleAuthenticated && (
             <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800">

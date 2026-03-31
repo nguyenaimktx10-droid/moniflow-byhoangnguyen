@@ -3,6 +3,7 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { google } from "googleapis";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 import dotenv from "dotenv";
 import type { CookieOptions } from "express";
 
@@ -11,7 +12,17 @@ dotenv.config();
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
+/** Cloud Run / production: NODE_ENV hoặc biến mặc định của nền tảng. */
+const isProduction =
+  process.env.NODE_ENV === "production" || Boolean(process.env.K_SERVICE);
+
 app.set("trust proxy", 1);
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: "50mb" }));
 app.use(cookieParser());
 
@@ -219,9 +230,9 @@ app.post("/api/auth/logout", (req, res) => {
   res.json({ success: true });
 });
 
-// Vite middleware for development
+// Vite middleware (dev) hoặc static dist (production / Cloud Run)
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+  if (!isProduction) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -231,12 +242,21 @@ async function startServer() {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
+      if (req.path.startsWith("/api") || req.path.startsWith("/auth")) {
+        return res.status(404).json({
+          error: "not_found",
+          path: req.path,
+          hint: "API routes must be registered; check server.ts order.",
+        });
+      }
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(
+      `[moni-flow] ${isProduction ? "production" : "dev"} → http://0.0.0.0:${PORT}`
+    );
   });
 }
 
