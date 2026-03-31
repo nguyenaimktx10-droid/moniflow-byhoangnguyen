@@ -4,20 +4,75 @@ import path from "path";
 import { google } from "googleapis";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
+import type { CookieOptions } from "express";
 
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
-app.use(express.json({ limit: '50mb' }));
+app.set("trust proxy", 1);
+app.use(express.json({ limit: "50mb" }));
 app.use(cookieParser());
 
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  `${process.env.APP_URL}/auth/callback`
-);
+/** Redirect URI phải trùng URL đang mở app (localhost hoặc Cloud Run). */
+function getOAuthRedirectUri(req: express.Request): string {
+  const host = req.get("host") || `localhost:${PORT}`;
+  let proto = (req.get("x-forwarded-proto") || req.protocol || "http").trim();
+  if (proto.includes(",")) proto = proto.split(",")[0].trim();
+  if (proto !== "http" && proto !== "https") proto = "https";
+  return `${proto}://${host}/auth/callback`;
+}
+
+function createOAuth2Client(req: express.Request) {
+  const id = process.env.GOOGLE_CLIENT_ID;
+  const secret = process.env.GOOGLE_CLIENT_SECRET;
+  return new google.auth.OAuth2(id, secret, getOAuthRedirectUri(req));
+}
+
+function createBareOAuth2Client() {
+  return new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET
+  );
+}
+
+function getSessionCookieOpts(req: express.Request): CookieOptions {
+  const secure =
+    req.secure ||
+    req.get("x-forwarded-proto")?.split(",")[0].trim() === "https";
+  return {
+    secure,
+    sameSite: secure ? "none" : "lax",
+    httpOnly: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    path: "/",
+  };
+}
+
+function clearSessionCookieOpts(req: express.Request): CookieOptions {
+  const secure =
+    req.secure ||
+    req.get("x-forwarded-proto")?.split(",")[0].trim() === "https";
+  return {
+    secure,
+    sameSite: secure ? "none" : "lax",
+    httpOnly: true,
+    path: "/",
+  };
+}
+
+function requireGoogleEnv(res: express.Response): boolean {
+  if (!process.env.GOOGLE_CLIENT_ID?.trim() || !process.env.GOOGLE_CLIENT_SECRET?.trim()) {
+    res.status(503).json({
+      error:
+        "Chưa cấu hình GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET trên server (biến môi trường hoặc file .env).",
+      code: "MISSING_OAUTH_ENV",
+    });
+    return false;
+  }
+  return true;
+}
 
 // API routes
 app.get("/api/health", (req, res) => {
@@ -25,48 +80,64 @@ app.get("/api/health", (req, res) => {
 });
 
 app.get("/api/auth/url", (req, res) => {
-  const url = oauth2Client.generateAuthUrl({
-    access_type: "offline",
-    scope: [
-      "https://www.googleapis.com/auth/spreadsheets",
-      "https://www.googleapis.com/auth/drive.file"
-    ],
-    prompt: "consent"
-  });
-  res.json({ url });
+  if (!requireGoogleEnv(res)) return;
+  try {
+    const oauth2Client = createOAuth2Client(req);
+    const url = oauth2Client.generateAuthUrl({
+      access_type: "offline",
+      scope: [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive.file",
+      ],
+      prompt: "consent",
+    });
+    res.json({ url });
+  } catch (e: unknown) {
+    console.error("generateAuthUrl:", e);
+    res.status(500).json({
+      error: e instanceof Error ? e.message : "Không tạo được URL đăng nhập Google.",
+      code: "AUTH_URL_FAILED",
+    });
+  }
 });
 
 app.get("/auth/callback", async (req, res) => {
   const { code } = req.query;
+  if (!code || typeof code !== "string") {
+    return res.status(400).send("Missing authorization code");
+  }
+  if (!process.env.GOOGLE_CLIENT_ID?.trim() || !process.env.GOOGLE_CLIENT_SECRET?.trim()) {
+    return res.status(503).send("Server OAuth chưa được cấu hình.");
+  }
   try {
-    const { tokens } = await oauth2Client.getToken(code as string);
-    
-    // Store tokens in a secure cookie
-    res.cookie("google_tokens", JSON.stringify(tokens), {
-      secure: true,
-      sameSite: "none",
-      httpOnly: true,
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-    });
+    const oauth2Client = createOAuth2Client(req);
+    const { tokens } = await oauth2Client.getToken(code);
+    res.cookie("google_tokens", JSON.stringify(tokens), getSessionCookieOpts(req));
 
     res.send(`
+      <!DOCTYPE html>
       <html>
         <body>
           <script>
-            if (window.opener) {
-              window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
-              window.close();
-            } else {
-              window.location.href = '/';
-            }
+            (function () {
+              if (window.opener) {
+                window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
+                window.close();
+              } else {
+                window.location.href = '/';
+              }
+            })();
           </script>
-          <p>Authentication successful. This window should close automatically.</p>
+          <p>Đăng nhập thành công. Cửa sổ sẽ đóng tự động.</p>
         </body>
       </html>
     `);
   } catch (error) {
     console.error("OAuth error:", error);
-    res.status(500).send("Authentication failed");
+    res.status(500).send(
+      "Authentication failed: " +
+        (error instanceof Error ? error.message : "unknown")
+    );
   }
 });
 
@@ -78,6 +149,7 @@ app.post("/api/sync-sheets", async (req, res) => {
 
   const { transactions, spreadsheetId } = req.body;
   const tokens = JSON.parse(tokensStr);
+  const oauth2Client = createBareOAuth2Client();
   oauth2Client.setCredentials(tokens);
 
   const sheets = google.sheets({ version: "v4", auth: oauth2Client });
@@ -85,50 +157,55 @@ app.post("/api/sync-sheets", async (req, res) => {
   try {
     let targetSpreadsheetId = spreadsheetId;
 
-    // If no spreadsheetId provided, create a new one
     if (!targetSpreadsheetId) {
       const spreadsheet = await sheets.spreadsheets.create({
         requestBody: {
           properties: {
-            title: `Moni Flow - CEO Hoàng Nguyên - ${new Date().toLocaleDateString()}`
-          }
-        }
+            title: `Moni Flow - CEO Hoàng Nguyên - ${new Date().toLocaleDateString()}`,
+          },
+        },
       });
       targetSpreadsheetId = spreadsheet.data.spreadsheetId;
     }
 
-    // Prepare data for sheets
     const values = [
       ["ID", "Ngày", "Loại", "Số tiền", "Danh mục", "Ghi chú", "Định kỳ"],
-      ...transactions.map((t: any) => [
+      ...transactions.map((t: {
+        id: string;
+        date: string;
+        type: string;
+        amount: number;
+        category: string;
+        note?: string;
+        recurring: string;
+      }) => [
         t.id,
         t.date,
         t.type,
         t.amount,
         t.category,
         t.note || "",
-        t.recurring
-      ])
+        t.recurring,
+      ]),
     ];
 
-    // Get the first sheet's name dynamically
     const spreadsheet = await sheets.spreadsheets.get({
-      spreadsheetId: targetSpreadsheetId
+      spreadsheetId: targetSpreadsheetId,
     });
     const sheetName = spreadsheet.data.sheets?.[0]?.properties?.title || "Sheet1";
 
-    // Clear existing data and write new data
     await sheets.spreadsheets.values.update({
       spreadsheetId: targetSpreadsheetId,
       range: `${sheetName}!A1`,
       valueInputOption: "RAW",
-      requestBody: { values }
+      requestBody: { values },
     });
 
     res.json({ success: true, spreadsheetId: targetSpreadsheetId });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Sheets sync error:", error);
-    res.status(500).json({ error: error.message });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: message });
   }
 });
 
@@ -138,11 +215,7 @@ app.get("/api/auth/status", (req, res) => {
 });
 
 app.post("/api/auth/logout", (req, res) => {
-  res.clearCookie("google_tokens", {
-    secure: true,
-    sameSite: "none",
-    httpOnly: true
-  });
+  res.clearCookie("google_tokens", clearSessionCookieOpts(req));
   res.json({ success: true });
 });
 
@@ -155,10 +228,10 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 

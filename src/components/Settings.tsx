@@ -52,9 +52,12 @@ export default function Settings() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  const apiFetch = (input: string, init?: RequestInit) =>
+    fetch(input, { ...init, credentials: 'include' });
+
   const checkAuthStatus = async () => {
     try {
-      const res = await fetch('/api/auth/status');
+      const res = await apiFetch('/api/auth/status');
       const data = await res.json();
       setIsGoogleAuthenticated(data.isAuthenticated);
     } catch (error) {
@@ -64,17 +67,32 @@ export default function Settings() {
 
   const handleGoogleConnect = async () => {
     try {
-      const res = await fetch('/api/auth/url');
-      const { url } = await res.json();
-      window.open(url, 'google_oauth', 'width=600,height=700');
+      const res = await apiFetch('/api/auth/url');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(
+          data.error ||
+            `Không lấy được link Google (${res.status}). Kiểm tra biến môi trường trên server.`
+        );
+        return;
+      }
+      if (!data.url || typeof data.url !== 'string') {
+        alert('Phản hồi server không hợp lệ (thiếu URL OAuth).');
+        return;
+      }
+      const popup = window.open(data.url, 'google_oauth', 'width=600,height=700');
+      if (!popup) {
+        alert('Trình duyệt đã chặn cửa sổ popup. Hãy cho phép popup cho trang này và thử lại.');
+      }
     } catch (error) {
       console.error("Failed to get auth URL:", error);
+      alert('Lỗi mạng hoặc không kết nối được server. Chạy app bằng lệnh npm run dev (cổng 3000).');
     }
   };
 
   const handleGoogleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await apiFetch('/api/auth/logout', { method: 'POST' });
       setIsGoogleAuthenticated(false);
     } catch (error) {
       console.error("Failed to logout:", error);
@@ -84,7 +102,7 @@ export default function Settings() {
   const handleSync = async () => {
     setIsSyncing(true);
     try {
-      const res = await fetch('/api/sync-sheets', {
+      const res = await apiFetch('/api/sync-sheets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ transactions, spreadsheetId })
