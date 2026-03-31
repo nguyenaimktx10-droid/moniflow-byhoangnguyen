@@ -1,40 +1,14 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
-import { google } from "googleapis";
-import cookieParser from "cookie-parser";
 import cors from "cors";
 import dotenv from "dotenv";
-import type { CookieOptions } from "express";
 
 dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-/** Cấu hình OAuth do client gửi (POST /api/oauth/config) — ghi đè env cho phiên làm việc. */
-const oauthRuntime: {
-  googleClientId: string;
-  googleClientSecret: string;
-  appUrl: string;
-} = {
-  googleClientId: "",
-  googleClientSecret: "",
-  appUrl: "",
-};
-
-function getEffectiveGoogleCreds() {
-  const clientId = (
-    oauthRuntime.googleClientId || process.env.GOOGLE_CLIENT_ID || ""
-  ).trim();
-  const clientSecret = (
-    oauthRuntime.googleClientSecret || process.env.GOOGLE_CLIENT_SECRET || ""
-  ).trim();
-  const appUrl = (oauthRuntime.appUrl || process.env.APP_URL || "").trim();
-  return { clientId, clientSecret, appUrl };
-}
-
-/** Cloud Run / production: NODE_ENV hoặc biến mặc định của nền tảng. */
 const isProduction =
   process.env.NODE_ENV === "production" || Boolean(process.env.K_SERVICE);
 
@@ -43,240 +17,14 @@ app.use(
   cors({
     origin: true,
     credentials: true,
-    methods: ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-    optionsSuccessStatus: 204,
   })
 );
 app.use(express.json({ limit: "50mb" }));
-app.use(cookieParser());
 
-/** Redirect URI: nếu có APP_URL (runtime hoặc env) thì dùng cố định; không thì theo request. */
-function getOAuthRedirectUri(req: express.Request): string {
-  const { appUrl } = getEffectiveGoogleCreds();
-  if (appUrl) {
-    return `${appUrl.replace(/\/$/, "")}/auth/callback`;
-  }
-  const host = req.get("host") || `localhost:${PORT}`;
-  let proto = (req.get("x-forwarded-proto") || req.protocol || "http").trim();
-  if (proto.includes(",")) proto = proto.split(",")[0].trim();
-  if (proto !== "http" && proto !== "https") proto = "https";
-  return `${proto}://${host}/auth/callback`;
-}
-
-function createOAuth2Client(req: express.Request) {
-  const { clientId, clientSecret } = getEffectiveGoogleCreds();
-  return new google.auth.OAuth2(clientId, clientSecret, getOAuthRedirectUri(req));
-}
-
-function createBareOAuth2Client() {
-  const { clientId, clientSecret } = getEffectiveGoogleCreds();
-  return new google.auth.OAuth2(clientId, clientSecret);
-}
-
-function getSessionCookieOpts(req: express.Request): CookieOptions {
-  const secure =
-    req.secure ||
-    req.get("x-forwarded-proto")?.split(",")[0].trim() === "https";
-  return {
-    secure,
-    sameSite: secure ? "none" : "lax",
-    httpOnly: true,
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-    path: "/",
-  };
-}
-
-function clearSessionCookieOpts(req: express.Request): CookieOptions {
-  const secure =
-    req.secure ||
-    req.get("x-forwarded-proto")?.split(",")[0].trim() === "https";
-  return {
-    secure,
-    sameSite: secure ? "none" : "lax",
-    httpOnly: true,
-    path: "/",
-  };
-}
-
-function requireGoogleEnv(res: express.Response): boolean {
-  const { clientId, clientSecret } = getEffectiveGoogleCreds();
-  if (!clientId || !clientSecret) {
-    res.status(503).json({
-      error:
-        "Chưa cấu hình GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET (biến môi trường, .env hoặc form Kết nối Google trong app).",
-      code: "MISSING_OAUTH_ENV",
-    });
-    return false;
-  }
-  return true;
-}
-
-// API routes
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-app.post("/api/oauth/config", (req, res) => {
-  const body = req.body as {
-    googleClientId?: string;
-    googleClientSecret?: string;
-    appUrl?: string;
-  };
-  if (typeof body.googleClientId === "string") {
-    oauthRuntime.googleClientId = body.googleClientId;
-  }
-  if (typeof body.googleClientSecret === "string") {
-    oauthRuntime.googleClientSecret = body.googleClientSecret;
-  }
-  if (typeof body.appUrl === "string") {
-    oauthRuntime.appUrl = body.appUrl.trim();
-  }
-  res.json({ ok: true });
-});
-
-app.get("/api/auth/url", (req, res) => {
-  if (!requireGoogleEnv(res)) return;
-  try {
-    const oauth2Client = createOAuth2Client(req);
-    const url = oauth2Client.generateAuthUrl({
-      access_type: "offline",
-      scope: [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive.file",
-      ],
-      prompt: "consent",
-    });
-    res.json({ url });
-  } catch (e: unknown) {
-    console.error("generateAuthUrl:", e);
-    res.status(500).json({
-      error: e instanceof Error ? e.message : "Không tạo được URL đăng nhập Google.",
-      code: "AUTH_URL_FAILED",
-    });
-  }
-});
-
-app.get("/auth/callback", async (req, res) => {
-  const { code } = req.query;
-  if (!code || typeof code !== "string") {
-    return res.status(400).send("Missing authorization code");
-  }
-  const { clientId, clientSecret } = getEffectiveGoogleCreds();
-  if (!clientId || !clientSecret) {
-    return res.status(503).send("Server OAuth chưa được cấu hình.");
-  }
-  try {
-    const oauth2Client = createOAuth2Client(req);
-    const { tokens } = await oauth2Client.getToken(code);
-    res.cookie("google_tokens", JSON.stringify(tokens), getSessionCookieOpts(req));
-
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-        <body>
-          <script>
-            (function () {
-              if (window.opener) {
-                window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
-                window.close();
-              } else {
-                window.location.href = '/';
-              }
-            })();
-          </script>
-          <p>Đăng nhập thành công. Cửa sổ sẽ đóng tự động.</p>
-        </body>
-      </html>
-    `);
-  } catch (error) {
-    console.error("OAuth error:", error);
-    res.status(500).send(
-      "Authentication failed: " +
-        (error instanceof Error ? error.message : "unknown")
-    );
-  }
-});
-
-app.post("/api/sync-sheets", async (req, res) => {
-  const tokensStr = req.cookies.google_tokens;
-  if (!tokensStr) {
-    return res.status(401).json({ error: "Not authenticated with Google" });
-  }
-
-  const { transactions, spreadsheetId } = req.body;
-  const tokens = JSON.parse(tokensStr);
-  const oauth2Client = createBareOAuth2Client();
-  oauth2Client.setCredentials(tokens);
-
-  const sheets = google.sheets({ version: "v4", auth: oauth2Client });
-
-  try {
-    let targetSpreadsheetId = spreadsheetId;
-
-    if (!targetSpreadsheetId) {
-      const spreadsheet = await sheets.spreadsheets.create({
-        requestBody: {
-          properties: {
-            title: `Moni Flow - CEO Hoàng Nguyên - ${new Date().toLocaleDateString()}`,
-          },
-        },
-      });
-      targetSpreadsheetId = spreadsheet.data.spreadsheetId;
-    }
-
-    const values = [
-      ["ID", "Ngày", "Loại", "Số tiền", "Danh mục", "Ghi chú", "Định kỳ"],
-      ...transactions.map((t: {
-        id: string;
-        date: string;
-        type: string;
-        amount: number;
-        category: string;
-        note?: string;
-        recurring: string;
-      }) => [
-        t.id,
-        t.date,
-        t.type,
-        t.amount,
-        t.category,
-        t.note || "",
-        t.recurring,
-      ]),
-    ];
-
-    const spreadsheet = await sheets.spreadsheets.get({
-      spreadsheetId: targetSpreadsheetId,
-    });
-    const sheetName = spreadsheet.data.sheets?.[0]?.properties?.title || "Sheet1";
-
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: targetSpreadsheetId,
-      range: `${sheetName}!A1`,
-      valueInputOption: "RAW",
-      requestBody: { values },
-    });
-
-    res.json({ success: true, spreadsheetId: targetSpreadsheetId });
-  } catch (error: unknown) {
-    console.error("Sheets sync error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    res.status(500).json({ error: message });
-  }
-});
-
-app.get("/api/auth/status", (req, res) => {
-  const tokens = req.cookies.google_tokens;
-  res.json({ isAuthenticated: !!tokens });
-});
-
-app.post("/api/auth/logout", (req, res) => {
-  res.clearCookie("google_tokens", clearSessionCookieOpts(req));
-  res.json({ success: true });
-});
-
-// Vite middleware (dev) hoặc static dist (production / Cloud Run)
 async function startServer() {
   if (!isProduction) {
     const vite = await createViteServer({
@@ -288,11 +36,10 @@ async function startServer() {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      if (req.path.startsWith("/api") || req.path.startsWith("/auth")) {
+      if (req.path.startsWith("/api")) {
         return res.status(404).json({
           error: "not_found",
           path: req.path,
-          hint: "API routes must be registered; check server.ts order.",
         });
       }
       res.sendFile(path.join(distPath, "index.html"));

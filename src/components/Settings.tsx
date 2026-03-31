@@ -1,78 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useFinanceStore } from '../store/useFinanceStore';
-import { formatCurrency } from '../lib/utils';
-import { Trash2, Download, Info, Moon, Sun, ChevronRight, Shield, Bell, FileSpreadsheet, LogOut, RefreshCw, ExternalLink } from 'lucide-react';
-import { apiUrl } from '../lib/apiUrl';
+import { Trash2, Download, Info, Moon, Sun, ChevronRight, Shield, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import SpendingReminders from './SpendingReminders';
 
-type SettingsProps = {
-  /** Mở popup kết nối Google (trang chủ / overlay) */
-  onOpenGoogleOAuthModal: () => void;
-};
-
-export default function Settings({ onOpenGoogleOAuthModal }: SettingsProps) {
-  const { initialBalance, setInitialBalance, transactions, darkMode, toggleDarkMode, spreadsheetId, setSpreadsheetId, resetAllData, resetExceptPayLater } = useFinanceStore();
+export default function Settings() {
+  const { initialBalance, setInitialBalance, transactions, darkMode, toggleDarkMode, resetAllData, resetExceptPayLater } = useFinanceStore();
   const [showReminders, setShowReminders] = useState(false);
-  const [isGoogleAuthenticated, setIsGoogleAuthenticated] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-
-  useEffect(() => {
-    checkAuthStatus();
-
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
-        setIsGoogleAuthenticated(true);
-      }
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
-  const apiFetch = (pathname: string, init?: RequestInit) =>
-    fetch(apiUrl(pathname), { ...init, credentials: 'include' });
-
-  const checkAuthStatus = async () => {
-    try {
-      const res = await apiFetch('/api/auth/status');
-      const data = await res.json();
-      setIsGoogleAuthenticated(data.isAuthenticated);
-    } catch (error) {
-      console.error("Failed to check auth status:", error);
-    }
-  };
-
-  const handleGoogleLogout = async () => {
-    try {
-      await apiFetch('/api/auth/logout', { method: 'POST' });
-      setIsGoogleAuthenticated(false);
-    } catch (error) {
-      console.error("Failed to logout:", error);
-    }
-  };
-
-  const handleSync = async () => {
-    setIsSyncing(true);
-    try {
-      const res = await apiFetch('/api/sync-sheets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions, spreadsheetId })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSpreadsheetId(data.spreadsheetId);
-        alert(`Đã đồng bộ thành công lên Google Sheets! ID: ${data.spreadsheetId}`);
-      } else {
-        alert(`Lỗi đồng bộ: ${data.error}`);
-      }
-    } catch (error) {
-      console.error("Sync failed:", error);
-      alert("Đồng bộ thất bại. Vui lòng thử lại.");
-    } finally {
-      setIsSyncing(false);
-    }
-  };
 
   const handleExport = () => {
     const data = JSON.stringify(transactions, null, 2);
@@ -89,8 +23,6 @@ export default function Settings({ onOpenGoogleOAuthModal }: SettingsProps) {
   const handleClearData = () => {
     if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ dữ liệu và khởi động lại ứng dụng? Hành động này không thể hoàn tác.')) {
       resetAllData();
-      // Optionally clear cookies too if needed
-      handleGoogleLogout();
       window.location.reload();
     }
   };
@@ -145,109 +77,6 @@ export default function Settings({ onOpenGoogleOAuthModal }: SettingsProps) {
         </p>
       </section>
 
-      {/* Google Sheets — form OAuth nằm ở popup trang chủ */}
-      <section className="space-y-4">
-        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 text-center md:text-left">
-          Kết nối Google
-        </h2>
-        <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-card-dark">
-          <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
-            Nhập Client ID, Secret và APP_URL trong{' '}
-            <strong className="text-slate-700 dark:text-slate-200">popup trên trang chủ</strong>, rồi bấm
-            Kết nối để lưu vào hệ thống.
-          </p>
-          <button
-            type="button"
-            onClick={onOpenGoogleOAuthModal}
-            className="mt-4 w-full rounded-2xl border border-emerald-200 bg-emerald-50 py-3.5 text-[10px] font-black uppercase tracking-widest text-emerald-800 transition-colors hover:bg-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-200 dark:hover:bg-emerald-900/30"
-          >
-            Mở form kết nối Google
-          </button>
-        </div>
-      </section>
-
-      {/* Google Sheets Sync */}
-      <section className="space-y-4">
-        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 text-center md:text-left">Google Sheets Sync</h2>
-        
-        <div className="bg-white dark:bg-card-dark p-6 rounded-[32px] shadow-sm border border-slate-50 dark:border-slate-800/50 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl flex items-center justify-center text-emerald-500">
-                <FileSpreadsheet size={24} />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-slate-800 dark:text-white">Google Sheets</h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                  {isGoogleAuthenticated ? 'Đã kết nối' : 'Chưa kết nối'}
-                </p>
-              </div>
-            </div>
-            
-            {!isGoogleAuthenticated ? (
-              <button 
-                type="button"
-                onClick={onOpenGoogleOAuthModal}
-                className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20"
-              >
-                Kết nối
-              </button>
-            ) : (
-              <button 
-                onClick={handleGoogleLogout}
-                className="p-2 text-slate-400 hover:text-red-500 transition-colors"
-              >
-                <LogOut size={18} />
-              </button>
-            )}
-          </div>
-          <p className="text-[10px] text-slate-400 leading-relaxed">
-            Nút này gọi API <code className="text-[9px]">/api/auth/url</code> — cần chạy{' '}
-            <strong className="text-slate-600 dark:text-slate-300">npm run dev</strong> hoặc sau build{' '}
-            <strong className="text-slate-600 dark:text-slate-300">npm start</strong> (không chỉ &quot;vite
-            preview&quot;). Cloud Run: lệnh khởi động phải là <code className="text-[9px]">npm start</code>.
-          </p>
-
-          {isGoogleAuthenticated && (
-            <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Spreadsheet ID</p>
-                  <div className="flex items-center space-x-2">
-                    <p className="text-xs font-mono text-slate-600 dark:text-slate-300 truncate max-w-[150px]">
-                      {spreadsheetId || 'Chưa có (Sẽ tạo mới khi sync)'}
-                    </p>
-                    {spreadsheetId && (
-                      <a 
-                        href={`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-emerald-500 hover:text-emerald-600 transition-colors"
-                        title="Mở bảng tính"
-                      >
-                        <ExternalLink size={14} />
-                      </a>
-                    )}
-                  </div>
-                </div>
-                <button 
-                  onClick={handleSync}
-                  disabled={isSyncing}
-                  className={`flex items-center space-x-2 px-6 py-3 bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${isSyncing ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
-                >
-                  <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
-                  <span>{isSyncing ? 'Đang sync...' : 'Đồng bộ ngay'}</span>
-                </button>
-              </div>
-              
-              <p className="text-[10px] text-slate-400 italic leading-relaxed">
-                * Toàn bộ dữ liệu chi/thu sẽ được lưu trữ trên Google Sheet để CEO Hoàng Nguyên có thể xem báo cáo Excel bất cứ lúc nào.
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
-
       {/* App Settings */}
       <section className="space-y-4">
         <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4">Ứng dụng</h2>
@@ -290,7 +119,7 @@ export default function Settings({ onOpenGoogleOAuthModal }: SettingsProps) {
             rightContent={<ChevronRight size={18} className="text-slate-300" />}
           />
           <SettingItem 
-            icon={<RefreshCw size={20} className="text-amber-500" />}
+            icon={<RefreshCwIcon />}
             label="Khởi động lại (Giữ PayLater)"
             onClick={handlePartialReset}
             rightContent={<ChevronRight size={18} className="text-slate-300" />}

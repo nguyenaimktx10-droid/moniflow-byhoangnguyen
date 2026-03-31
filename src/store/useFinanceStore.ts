@@ -31,7 +31,6 @@ interface FinanceState {
   darkMode: boolean;
   hasCompletedOnboarding: boolean;
   spendingLimits: SpendingLimit[];
-  spreadsheetId: string | null;
   businessContracts: BusinessContract[];
   addTransaction: (t: Omit<Transaction, 'id'>) => void;
   updateTransaction: (id: string, t: Partial<Transaction>) => void;
@@ -42,7 +41,6 @@ interface FinanceState {
   addSpendingLimit: (limit: Omit<SpendingLimit, 'id'>) => void;
   updateSpendingLimit: (id: string, limit: Partial<SpendingLimit>) => void;
   deleteSpendingLimit: (id: string) => void;
-  setSpreadsheetId: (id: string | null) => void;
   addBusinessContract: (c: Omit<BusinessContract, 'id'>) => void;
   updateBusinessContract: (id: string, c: Partial<BusinessContract>) => void;
   deleteBusinessContract: (id: string) => void;
@@ -79,7 +77,6 @@ export const useFinanceStore = create<FinanceState>()(
       darkMode: false,
       hasCompletedOnboarding: false,
       spendingLimits: [],
-      spreadsheetId: null,
       businessContracts: [],
 
       addBusinessContract: (c) => set((state) => ({
@@ -129,13 +126,10 @@ export const useFinanceStore = create<FinanceState>()(
         spendingLimits: state.spendingLimits.filter(l => l.id !== id)
       })),
 
-      setSpreadsheetId: (id: string | null) => set({ spreadsheetId: id }),
-      
       resetAllData: () => set({
         transactions: [],
         initialBalance: 0,
         spendingLimits: [],
-        spreadsheetId: null,
         businessContracts: [],
         hasCompletedOnboarding: false
       }),
@@ -146,7 +140,6 @@ export const useFinanceStore = create<FinanceState>()(
         ),
         initialBalance: 0,
         spendingLimits: [],
-        spreadsheetId: null,
         businessContracts: [],
         hasCompletedOnboarding: false
       })),

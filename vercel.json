@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/api/oauth/config",
-      "destination": "https://ais-dev-66zmhcmlsa2rwaopo3s2ot-74012682878.asia-southeast1.run.app/api/oauth/config"
-    }
-  ]
-}

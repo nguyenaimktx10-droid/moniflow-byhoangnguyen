@@ -4,17 +4,12 @@ import { CATEGORIES } from '../constants';
 import { formatCurrency } from '../lib/utils';
 import { format, parseISO, isAfter, startOfDay } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { TrendingUp, Calendar, AlertTriangle, ChevronRight, ArrowUpRight, ArrowDownRight, FileSpreadsheet } from 'lucide-react';
+import { TrendingUp, Calendar, AlertTriangle, ChevronRight, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { motion } from 'motion/react';
 
 import AIInsights from './AIInsights';
 
-type DashboardProps = {
-  /** Mở popup kết nối Google (trang chủ) */
-  onOpenGoogleSheetsModal?: () => void;
-};
-
-export default function Dashboard({ onOpenGoogleSheetsModal }: DashboardProps) {
+export default function Dashboard() {
   const { getTimeline, getAIInsights } = useFinanceStore();
   const timeline = getTimeline();
   const insightsData = getAIInsights();
@@ -45,19 +40,6 @@ export default function Dashboard({ onOpenGoogleSheetsModal }: DashboardProps) {
 
   return (
     <div className="space-y-8">
-      {onOpenGoogleSheetsModal && (
-        <div className="flex justify-end px-2">
-          <button
-            type="button"
-            onClick={onOpenGoogleSheetsModal}
-            className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-700 shadow-sm transition-colors hover:border-emerald-300 hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-emerald-700 dark:hover:text-emerald-400"
-          >
-            <FileSpreadsheet size={16} className="text-emerald-500" />
-            Kết nối Google Sheets
-          </button>
-        </div>
-      )}
-
       {/* Header / Balance Card */}
       <motion.div 
         initial={{ opacity: 0, scale: 0.9 }}
